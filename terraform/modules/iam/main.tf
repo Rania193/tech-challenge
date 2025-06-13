@@ -37,10 +37,12 @@ resource "aws_iam_user_policy" "app_user_policy" {
       },
       {
         Effect = "Allow"
-        Action = [
-          "ssm:GetParameters",
-          "ssm:DescribeParameters"
-        ]
+        Action = ["ssm:DescribeParameters"]
+        Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/*"
+      },
+      {
+        Effect = "Allow"
+        Action = ["ssm:GetParameters"]
         Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/${var.environment}/*"
       }
     ]
