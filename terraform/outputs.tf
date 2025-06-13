@@ -3,10 +3,6 @@ output "challenge_bucket_name" {
   value       = module.s3.challenge_bucket_name
 }
 
-output "state_bucket_name" {
-  description = "Name of the Terraform state S3 bucket"
-  value       = module.s3.state_bucket_name
-}
 
 output "parameter_names" {
   description = "List of created parameter names"
