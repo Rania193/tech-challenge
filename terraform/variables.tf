@@ -13,3 +13,8 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+variable "github_repo" {
+  description = "GitHub repository in the format owner/repo"
+  type        = string
+  default     = "Rania193/tech-challenge"
+}
