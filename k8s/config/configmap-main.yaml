@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-versions
+  namespace: main-api
+data:
+  main-api-version: "latest"

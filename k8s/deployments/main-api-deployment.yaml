@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: main-api
+  namespace: main-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: main-api
+  template:
+    metadata:
+      labels:
+        app: main-api
+    spec:
+      containers:
+        - name: main-api
+          image: 905317844123.dkr.ecr.eu-west-1.amazonaws.com/main-api:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: AUXILIARY_SERVICE_URL
+              value: "http://auxiliary-service.auxiliary-service.svc.cluster.local:8001"
+            - name: SERVICE_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: service-versions
+                  key: main-api-version
+      imagePullSecrets:
+          - name: regcred
