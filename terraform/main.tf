@@ -20,3 +20,9 @@ module "iam" {
   environment  = var.environment
   github_repo  = var.github_repo
 }
+
+module "ecr" {
+  source      = "./modules/ecr"
+  project_name = var.project_name
+  environment  = var.environment
+}
