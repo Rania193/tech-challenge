@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: service-versions
-  namespace: auxiliary-service
-data:
-  auxiliary-service-version: "latest"
