@@ -12,3 +12,9 @@ variable "github_repo" {
   description = "GitHub repository in the format owner/repo"
   type        = string
 }
+
+variable "repository_arn_list" {
+  description = "URL of the main-api ECR repository"
+  type        = list
+  default = []
+}

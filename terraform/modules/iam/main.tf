@@ -96,10 +96,8 @@ resource "aws_iam_role_policy" "github_actions_policy" {
           "ecr:PutImage",
           "ecr:UploadLayerPart"
         ]
-        Resource = [
-          "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/main-api",
-          "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/auxiliary-service"
-        ]
+        # Resource = var.repository_arn_list
+        Resource = "*"
       }
     ]
   })

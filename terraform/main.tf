@@ -19,6 +19,7 @@ module "iam" {
   project_name = var.project_name
   environment  = var.environment
   github_repo  = var.github_repo
+  repository_arn_list = [module.ecr.main_api_repository_arn, module.ecr.auxiliary_service_repository_arn]
 }
 
 module "ecr" {
