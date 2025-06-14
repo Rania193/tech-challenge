@@ -3,7 +3,7 @@ import requests
 import os
 
 app = Flask(__name__)
-AUX_URL = "http://auxiliary-service.auxiliary-service.svc.cluster.local:5000"
+AUX_URL = "http://auxiliary-service.auxiliary-service.svc.cluster.local:8001"
 VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
 
 @app.route("/s3-buckets")
@@ -22,4 +22,4 @@ def get_parameter(name):
     return jsonify({"value": resp["value"], "main_api_version": VERSION, "auxiliary_service_version": resp["version"]})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001)
+    app.run(host="0.0.0.0", port=8000)
