@@ -9,7 +9,7 @@ import botocore
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env')) # for local testing
 
 AWS_REGION = os.getenv("AWS_REGION", "eu-west-1")
 

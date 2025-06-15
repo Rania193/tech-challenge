@@ -1,4 +1,4 @@
-# tech-challenge
+# Kubernetes-native microservices with GitOps (Argo CD), Terraform IaC, AWS integration (ECR, S3, SSM), and a GitHub Actions CI/CD pipeline.
 
 ```mermaid
 graph TD
@@ -59,3 +59,4 @@ graph TD
         N
     end
 ```
+
