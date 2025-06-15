@@ -3,9 +3,6 @@ kind: Deployment
 metadata:
   name: main-api
   namespace: main-api
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "8000"
 spec:
   replicas: 1
   selector:
@@ -15,6 +12,9 @@ spec:
     metadata:
       labels:
         app: main-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
     spec:
       containers:
         - name: main-api

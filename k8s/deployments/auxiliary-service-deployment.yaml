@@ -3,9 +3,6 @@ kind: Deployment
 metadata:
   name: auxiliary-service
   namespace: auxiliary-service
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "8001"
 spec:
   replicas: 1
   selector:
@@ -15,6 +12,9 @@ spec:
     metadata:
       labels:
         app: auxiliary-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8001"
     spec:
       containers:
         - name: auxiliary-service
