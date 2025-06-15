@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: auxiliary-service
-          image: 905317844123.dkr.ecr.eu-west-1.amazonaws.com/auxiliary-service:f75e6c69e43166a2bf4aa3f6a427469ddd64a514
+          image: 905317844123.dkr.ecr.eu-west-1.amazonaws.com/auxiliary-service:78ac0249e1f8096cdd89b162aad2523961afceb8
           ports:
             - containerPort: 8001
           env:
