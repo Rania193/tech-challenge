@@ -22,13 +22,13 @@ PARAM_PREFIX = "/kantox-challenge/dev"
 def list_buckets():
     response = s3.list_buckets()
     buckets = [bucket["Name"] for bucket in response["Buckets"]]
-    return jsonify({"buckets": buckets, "version": VERSION})
+    return jsonify({"buckets": buckets, "auxiliary_service_version": VERSION})
 
 @app.route("/parameters")
 def list_parameters():
     response = ssm.describe_parameters()
     params = [param["Name"] for param in response["Parameters"]]
-    return jsonify({"parameters": params, "version": VERSION})
+    return jsonify({"parameters": params, "auxiliary_service_version": VERSION})
 
 @app.route("/parameter/<name>")
 def get_parameter(name):
