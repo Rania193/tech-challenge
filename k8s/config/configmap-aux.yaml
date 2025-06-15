@@ -4,4 +4,4 @@ metadata:
   name: service-versions
   namespace: auxiliary-service
 data:
-  auxiliary-service-version: cf8ec16ae91ffa7c4d3938e69ef823c883607a93
+  auxiliary-service-version: cfcd8955161dec6aa6a5e4372bb6090ed582f316
