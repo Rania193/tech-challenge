@@ -5,8 +5,10 @@ import boto3
 import os
 import logging
 import botocore
+from prometheus_flask_exporter import PrometheusMetrics
 
 app = Flask(__name__)
+metrics = PrometheusMetrics(app)
 logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env')) # for local testing

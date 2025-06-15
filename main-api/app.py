@@ -1,8 +1,10 @@
 from flask import Flask, jsonify
 import requests
 import os
+from prometheus_flask_exporter import PrometheusMetrics
 
 app = Flask(__name__)
+metrics = PrometheusMetrics(app)
 AUX_URL = "http://auxiliary-service.auxiliary-service.svc.cluster.local:8001"
 VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
 
