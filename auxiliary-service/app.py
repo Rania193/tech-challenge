@@ -37,7 +37,7 @@ def get_parameter(name):
         full_name = f"{PARAM_PREFIX}/{name}"
         logging.debug(f"Input name: {name}, Resolved full_name: {full_name}")
         response = ssm.get_parameter(Name=full_name)
-        return jsonify({"value": response["Parameter"]["Value"], "version": VERSION})
+        return jsonify({"value": response["Parameter"]["Value"], "auxiliary_service_version": VERSION})
     except botocore.exceptions.ClientError as e:
         error_code = e.response.get("Error", {}).get("Code")
         logging.error(f"ClientError - Code: {error_code}, Message: {str(e)}, Full name: {full_name}")
