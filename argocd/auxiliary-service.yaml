@@ -25,9 +25,12 @@ spec:
         helm:
           valueFiles:
             - '{{valuesFile}}'
-          parameters:
-            - name: "namespace"
-              value: "{{ .namespace }}"
       destination:
         server: 'https://kubernetes.default.svc'
-        namespace: '{{ .namespace }}'
+        namespace: '{{namespace}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
