@@ -1,0 +1,15 @@
+server:
+  service:
+    type: NodePort
+    nodePortHttp: 30080 # expose the UI on http://NODE-IP:30080
+    nodePortHttps: 30443
+configs:
+  params:
+    "server.insecure": "true"  # skip TLS locally (UI served over plain HTTP)
+
+repoServer:
+  service:
+    metricsPort: 8081
+  metrics:
+    enabled: true
+    port: 8081
