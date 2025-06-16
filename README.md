@@ -396,7 +396,7 @@ curl -s http://<MAIN_API_HOST>:8000/parameter/<param_name> | jq
       # CPU usage by pod (cores)
       sum(rate(container_cpu_usage_seconds_total{namespace="main-api"}[5m])) by (pod)
       ```
-
+ 
       ```promql
       # Memory usage by pod (MiB)
       sum(container_memory_usage_bytes{namespace="main-api"}) by (pod) / (1024 * 1024)
