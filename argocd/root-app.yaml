@@ -8,12 +8,12 @@ spec:
   source:
     repoURL: https://github.com/Rania193/tech-challenge.git
     targetRevision: HEAD
-    path: k8s
+    path: envs
     directory:
       recurse: true
   destination:
     server: https://kubernetes.default.svc
-    namespace: main-api
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
