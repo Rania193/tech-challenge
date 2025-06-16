@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kantox-envs
+  namespace: argocd
+spec:
+  generators:
+    - git:
+        repoURL: https://github.com/Rania193/tech-challenge.git
+        revision: HEAD
+        directories:
+          - path: envs/*
+  template:
+    metadata:
+      name: kantox-{{path.basename}} # kantox-dev, kantox-prod …
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/Rania193/tech-challenge.git
+        targetRevision: HEAD
+        path: envs/{{path.basename}} # dev → envs/dev
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: main-api
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
