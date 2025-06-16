@@ -4,4 +4,4 @@ metadata:
   name: service-versions
   namespace: main-api
 data:
-  main-api-version: c3b73526bcca735889e1bd218ca0dda8de753d4f
+  main-api-version: 9cb3c1ed38cc361442716a36457cce2189ac7b70
