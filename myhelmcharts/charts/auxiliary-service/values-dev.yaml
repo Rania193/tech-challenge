@@ -1,4 +1,4 @@
 image:
-  tag: "febba0e0eee2cc3dadbf10bb38ae25972782b94b" # Will be updated to github.sha by the pipeline
+  tag: "00472ef03b17b8d88f6564cc7016f18140e84a46" # Will be updated to github.sha by the pipeline
 replicaCount: 1
-version: "febba0e0eee2cc3dadbf10bb38ae25972782b94b" # Will be updated to github.sha
+version: "00472ef03b17b8d88f6564cc7016f18140e84a46" # Will be updated to github.sha
