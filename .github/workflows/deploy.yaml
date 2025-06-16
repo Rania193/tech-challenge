@@ -57,6 +57,11 @@ jobs:
           echo "Updating Auxiliary Service Helm values..."
           yq e -i '.image.tag = "${{ github.sha }}"' myhelmcharts/charts/auxiliary-service/values-dev.yaml
           yq e -i '.version = "${{ github.sha }}"' myhelmcharts/charts/auxiliary-service/values-dev.yaml
+      - name: Update Helm Values for Dev - Main API
+        run: |
+          echo "Updating Main API Helm values..."
+          yq e -i '.image.tag = "${{ github.sha }}"' myhelmcharts/charts/main-api/values-dev.yaml
+          yq e -i '.version = "${{ github.sha }}"' myhelmcharts/charts/main-api/values-dev.yaml
       - name: Commit and Push Changes
         run: |
           echo "Committing updated manifests..."
