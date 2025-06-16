@@ -13,3 +13,12 @@ repoServer:
   metrics:
     enabled: true
     port: 8081
+
+controller:
+  config:
+    configManagementPlugins:
+      - name: kustomize
+        generate:
+          # call the CLI kustomize under the hood
+          command: ["kustomize", "build"]
+          args: ["--load-restrictor=none", "{{ .path }}"]
