@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: main-api
+  namespace: argocd # Adjust if your ArgoCD is in a different namespace
+spec:
+  generators:
+    - list:
+        elements:
+          - env: dev
+            namespace: dev
+            valuesFile: values-dev.yaml
+          - env: prod
+            namespace: prod
+            valuesFile: values-prod.yaml
+  template:
+    metadata:
+      name: '{{env}}-main-api'
+    spec:
+      project: default
+      source:
+        repoURL: 'https://github.com/Rania193/tech-challenge'
+        targetRevision: HEAD
+        path: myhelmcharts/charts/main-api
+        helm:
+          valueFiles:
+            - '{{valuesFile}}'
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: {{namespace}}

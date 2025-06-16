@@ -1,0 +1,5 @@
+image:
+  tag: "stable" # Updated manually or via a release process
+replicaCount: 3
+version: "stable"
+auxiliaryServiceUrl: "http://auxiliary-service.prod.svc.cluster.local:8001"

@@ -1,0 +1,4 @@
+image:
+  tag: "latest" # Will be updated to github.sha by the pipeline
+replicaCount: 1
+version: "latest" # Will be updated to github.sha

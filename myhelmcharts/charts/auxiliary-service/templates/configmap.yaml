@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auxiliary-service-versions
+  namespace: {{ .Release.Namespace }}
+data:
+  auxiliary-service-version: {{ .Values.version | quote }}

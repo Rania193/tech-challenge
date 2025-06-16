@@ -1,0 +1,4 @@
+image:
+  tag: "stable" # Updated manually or via a separate release process
+replicaCount: 3
+version: "stable"

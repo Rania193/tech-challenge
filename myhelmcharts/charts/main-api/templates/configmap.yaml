@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: main-api-versions
+  namespace: {{ .Release.Namespace }}
+data:
+  main-api-version: {{ .Values.version | quote }}

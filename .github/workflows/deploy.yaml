@@ -49,18 +49,19 @@ jobs:
           docker build -t ${{ steps.login-ecr.outputs.registry }}/auxiliary-service:${{ github.sha }} ./auxiliary-service
           echo "Pushing Auxiliary Service image..."
           docker push ${{ steps.login-ecr.outputs.registry }}/auxiliary-service:${{ github.sha }}
-      - name: Update Kubernetes Manifests
+      - name: Install yq
         run: |
-          echo "Updating Kubernetes manifests..."
-          sed -i "s|image:.*main-api:.*|image: ${{ steps.login-ecr.outputs.registry }}/main-api:${{ github.sha }}|" base/deployments/main-api-deployment.yaml
-          sed -i "s|image:.*auxiliary-service:.*|image: ${{ steps.login-ecr.outputs.registry }}/auxiliary-service:${{ github.sha }}|" base/deployments/auxiliary-service-deployment.yaml
-          sed -i "s|main-api-version:.*|main-api-version: ${{ github.sha }}|" base/config/configmap-main.yaml
-          sed -i "s|auxiliary-service-version:.*|auxiliary-service-version: ${{ github.sha }}|" base/config/configmap-aux.yaml
+          sudo snap install yq
+      - name: Update Helm Values for Dev - Auxiliary Service
+        run: |
+          echo "Updating Auxiliary Service Helm values..."
+          yq e -i '.image.tag = "${{ github.sha }}"' myhelmcharts/charts/auxiliary-service/values-dev.yaml
+          yq e -i '.version = "${{ github.sha }}"' myhelmcharts/charts/auxiliary-service/values-dev.yaml
       - name: Commit and Push Changes
         run: |
           echo "Committing updated manifests..."
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
-          git add base/
-          git commit -m "Update image tags and ConfigMap for commit ${{ github.sha }}" || echo "No changes to commit"
+          git add myhelmcharts/charts/
+          git commit -m "Update Helm values-dev.yaml for dev with version ${{ github.sha }}" || echo "No changes to commit"
           git push

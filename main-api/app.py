@@ -5,7 +5,7 @@ from prometheus_flask_exporter import PrometheusMetrics
 
 app = Flask(__name__)
 metrics = PrometheusMetrics(app)
-AUX_URL = "http://auxiliary-service.auxiliary-service.svc.cluster.local:8001"
+AUX_URL = os.getenv("AUXILIARY_SERVICE_URL")
 VERSION = os.getenv("SERVICE_VERSION", "1.0.0")
 
 @app.route("/s3-buckets")

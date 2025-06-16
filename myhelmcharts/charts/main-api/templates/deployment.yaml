@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: main-api
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: main-api
+  template:
+    metadata:
+      labels:
+        app: main-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.service.port }}"
+    spec:
+      containers:
+        - name: main-api
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          env:
+            - name: AUXILIARY_SERVICE_URL
+              value: {{ .Values.auxiliaryServiceUrl }}
+            - name: SERVICE_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: main-api-versions
+                  key: main-api-version
+      imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 10 }}

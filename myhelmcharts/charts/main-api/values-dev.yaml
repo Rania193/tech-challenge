@@ -1,0 +1,5 @@
+image:
+  tag: "latest" # Will be updated to github.sha
+replicaCount: 1
+version: "latest" # Will be updated to github.sha
+auxiliaryServiceUrl: "http://auxiliary-service.dev.svc.cluster.local:8001"

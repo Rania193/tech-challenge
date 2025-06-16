@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: auxiliary-service
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - env: dev
+            namespace: dev
+            valuesFile: values-dev.yaml
+          - env: prod
+            namespace: prod
+            valuesFile: values-prod.yaml
+  template:
+    metadata:
+      name: '{{env}}-auxiliary-service'
+    spec:
+      project: default
+      source:
+        repoURL: 'https://github.com/Rania193/tech-challenge'
+        targetRevision: HEAD
+        path: myhelmcharts/charts/auxiliary-service
+        helm:
+          valueFiles:
+            - '{{valuesFile}}'
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: {{namespace}}
