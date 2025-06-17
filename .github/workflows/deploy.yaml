@@ -62,6 +62,7 @@ jobs:
           fi
           echo "should_run=$SHOULD_RUN" >> $GITHUB_OUTPUT
       - name: Set Environment
+        if: steps.check-conditions.outputs.should_run == 'true'
         run: echo "Running for environment ${{ matrix.environment.name }}"
 
       - name: Configure AWS Credentials
