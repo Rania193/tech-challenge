@@ -1,4 +1,4 @@
 image:
-  tag: "stable" # Updated manually or via a separate release process
+  tag: "v1.0.5" # Updated manually or via a separate release process
 replicaCount: 3
-version: "stable"
+version: "v1.0.5"
