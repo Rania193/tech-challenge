@@ -8,7 +8,7 @@ on:
       - 'release/*'
 
 permissions:    
-  id-token: write   # This is required for receiving the JWT  
+  id-token: write   # This is required for receiving the JWT 
   contents: write    # This is required for actions/checkout 
 env:
   CHARTS_DIR: myhelmcharts/charts
