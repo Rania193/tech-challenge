@@ -1,4 +1,4 @@
 image:
-  tag: "7956b3f406f8f9c2a367ad7fec4f3c9999befec1" # Updated manually or via a separate release process
+  tag: "v1.0.11" # Updated manually or via a separate release process
 replicaCount: 3
-version: "7956b3f406f8f9c2a367ad7fec4f3c9999befec1"
+version: "v1.0.11"
