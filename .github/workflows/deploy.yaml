@@ -45,6 +45,7 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for tags
       - name: Check Conditions and Exit if Not Applicable
+        id: check-conditions
         run: |
           echo "Debug: github.event_name=${{ github.event_name }}"
           echo "Debug: matrix.environment.name=${{ matrix.environment.name }}"
