@@ -109,6 +109,7 @@ jobs:
         run: |
           echo "PWD=$(pwd)"
           ls -R | head
+          tree -L 3 myhelmcharts/charts/auxiliary-service || true
 
       - name: Bump Helm values
         if: steps.gate.outputs.should_run == 'true'
@@ -131,7 +132,6 @@ jobs:
           git commit -m "ci(${{ matrix.environment.name }}): bump charts to ${{ steps.set-tag.outputs.tag }}" || echo "No changes to commit"
           # Push back to the same branch (main or feature/*)
           TARGET_BRANCH="${GITHUB_REF#refs/heads/}"
-          git push origin HEAD:"$TARGET_BRANCH"
           # If this was a release tag build, push to main
           if [[ "$GITHUB_REF" =~ ^refs/tags/release/ ]]; then
             TARGET_BRANCH="main"
