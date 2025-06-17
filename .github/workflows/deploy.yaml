@@ -50,12 +50,14 @@ jobs:
           echo "Debug: matrix.environment.name=${{ matrix.environment.name }}"
           echo "Debug: startsWith(github.ref, 'refs/tags/release/')=${{ startsWith(github.ref, 'refs/tags/release/') }}"
           SHOULD_RUN=true
-          if [ "${{ github.event_name }}" != "push" ] || \
-             ([ "${{ matrix.environment.name }}" != "dev" ] && \
-              [ "${{ matrix.environment.name }}" != "prod" ] || \
-              [ "${{ matrix.environment.name }}" == "prod" ] && \
-              [ "${{ startsWith(github.ref, 'refs/tags/release/') }}" != "true" ]); then
-            echo "Skipping this job: Not a push event, or not dev/prod, or prod without release tag."
+          if [ "${{ github.event_name }}" != "push" ]; then
+            echo "Skipping: Not a push event."
+            SHOULD_RUN=false
+          elif [ "${{ matrix.environment.name }}" != "dev" ] && [ "${{ matrix.environment.name }}" != "prod" ]; then
+            echo "Skipping: Not a valid environment (dev or prod)."
+            SHOULD_RUN=false
+          elif [ "${{ matrix.environment.name }}" == "prod" ] && [ "${{ startsWith(github.ref, 'refs/tags/release/') }}" != "true" ]; then
+            echo "Skipping: Prod requires a release tag."
             SHOULD_RUN=false
           fi
           echo "should_run=$SHOULD_RUN" >> $GITHUB_OUTPUT
