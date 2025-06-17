@@ -109,7 +109,7 @@ jobs:
         if: steps.gate.outputs.should_run == 'true'
         run: |
           for svc in auxiliary-service main-api; do
-            file="$CHARTS_DIR/$svc/${{ matrix.environment.values-file }}"
+            file="./$CHARTS_DIR/$svc/${{ matrix.environment.values-file }}"
             echo "Updating $file to tag ${{ steps.set-tag.outputs.tag }}"
             yq e -i "
               .image.tag = \"${{ steps.set-tag.outputs.tag }}\" |
