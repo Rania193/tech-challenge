@@ -1,5 +1,5 @@
 image:
-  tag: "a4f7c64b6d05fc482954377bd1e1814afbf396fd" # Will be updated to github.sha
+  tag: "0527b4450bbff20d7d5718f76a749f831f2f798e" # Will be updated to github.sha
 replicaCount: 1
-version: "a4f7c64b6d05fc482954377bd1e1814afbf396fd" # Will be updated to github.sha
+version: "0527b4450bbff20d7d5718f76a749f831f2f798e" # Will be updated to github.sha
 auxiliaryServiceUrl: "http://auxiliary-service.dev.svc.cluster.local:8001"
