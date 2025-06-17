@@ -103,6 +103,10 @@ jobs:
           docker build -t ${{ steps.login-ecr.outputs.registry }}/auxiliary-service:${{ steps.set-tag.outputs.tag }} ./auxiliary-service
           echo "Pushing Auxiliary Service image..."
           docker push ${{ steps.login-ecr.outputs.registry }}/auxiliary-service:${{ steps.set-tag.outputs.tag }}
+      - name: Ensure we’re on main and up-to-date           # ← NEW
+        run: |
+          git checkout main
+          git pull --ff-only origin main
       - name: Install yq
         if: steps.check-conditions.outputs.should_run == 'true'
         run: |
