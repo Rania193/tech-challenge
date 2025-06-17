@@ -1,4 +1,4 @@
 image:
-  tag: "0da12452716f31bd70ae8cd7680125f9080f0f22" # Updated manually or via a separate release process
+  tag: "7956b3f406f8f9c2a367ad7fec4f3c9999befec1" # Updated manually or via a separate release process
 replicaCount: 3
-version: "0da12452716f31bd70ae8cd7680125f9080f0f22"
+version: "7956b3f406f8f9c2a367ad7fec4f3c9999befec1"
