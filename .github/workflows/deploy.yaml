@@ -1,9 +1,10 @@
 name: CI/CD Pipeline
 on:
   push:
+    # every commit to main drives Dev env
     branches:
-      - main
-      - 'feature/*'
+      - main 
+    # tags of the form release/X.Y.Z drive Prod env
     tags:
       - 'release/*'
 
@@ -50,7 +51,7 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for tags
 
-       # ─── Gate: dev on feature, prod on main or release tags ───────────────
+       # ─── Gate: dev on main, prod on release tags ───────────────
 
       - name: Gate dev vs prod
         id: gate
@@ -59,11 +60,11 @@ jobs:
           SHOULD_RUN=false
 
           if [[ "${{ matrix.environment.name }}" == "dev" ]] && \
-             [[ "$REF" =~ ^refs/heads/feature/ ]]; then
+             [[ "$REF" == refs/heads/main ]]; then
             SHOULD_RUN=true
 
           elif [[ "${{ matrix.environment.name }}" == "prod" ]] && \
-               ( [[ "$REF" == "refs/heads/main" ]] || [[ "$REF" =~ ^refs/tags/release/ ]] ); then
+               [[ "$REF" =~ ^refs/tags/release/ ]]; then
             SHOULD_RUN=true
           fi
 
@@ -127,10 +128,4 @@ jobs:
           git config user.email "action@github.com"
           git add "$CHARTS_DIR"
           git commit -m "ci(${{ matrix.environment.name }}): bump charts to ${{ steps.set-tag.outputs.tag }}" || echo "No changes to commit"
-          # Push back to the same branch (main or feature/*)
-          TARGET_BRANCH="${GITHUB_REF#refs/heads/}"
-          # If this was a release tag build, push to main
-          if [[ "$GITHUB_REF" =~ ^refs/tags/release/ ]]; then
-            TARGET_BRANCH="main"
-          fi
-          git push origin HEAD:"$TARGET_BRANCH"
+          git push origin HEAD:main
