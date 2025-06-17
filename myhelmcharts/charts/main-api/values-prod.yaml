@@ -1,5 +1,5 @@
 image:
-  tag: "v1.0.5" # Updated manually or via a release process
+  tag: "v1.0.8" # Updated manually or via a release process
 replicaCount: 3
-version: "v1.0.5"
+version: "v1.0.8"
 auxiliaryServiceUrl: "http://auxiliary-service.prod.svc.cluster.local:8001"
