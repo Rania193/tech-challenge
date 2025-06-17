@@ -26,7 +26,6 @@ jobs:
   #         terraform validate
   build-and-push:
     runs-on: ubuntu-latest
-    # if: github.event_name == 'push' && (matrix.environment.name == 'dev' || startsWith(github.ref, 'refs/tags/release/'))
     # needs: validate-terraform
     strategy:
       matrix:
@@ -60,6 +59,10 @@ jobs:
           elif [ "${{ matrix.environment.name }}" == "prod" ] && [ "${{ startsWith(github.ref, 'refs/tags/release/') }}" != "true" ]; then
             echo "Skipping: Prod requires a release tag."
             SHOULD_RUN=false
+          elif [ "${{ matrix.environment.name }}" == "dev" ] && \
+            [ "${{ startsWith(github.ref, 'refs/tags/release/') }}" == "true" ]; then
+          echo "Skipping: Dev job is not needed for a release tag."
+          SHOULD_RUN=false
           fi
           echo "should_run=$SHOULD_RUN" >> $GITHUB_OUTPUT
       - name: Set Environment
