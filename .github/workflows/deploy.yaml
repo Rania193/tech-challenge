@@ -2,6 +2,7 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [main]
+    tags: [release/*]
 permissions:    
   id-token: write   # This is required for receiving the JWT  
   contents: write    # This is required for actions/checkout 
@@ -25,7 +26,7 @@ jobs:
           terraform validate
   build-and-push:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (matrix.environment.name == 'dev' || startsWith(github.ref, 'refs/tags/release/'))
+    # if: github.event_name == 'push' && (matrix.environment.name == 'dev' || startsWith(github.ref, 'refs/tags/release/'))
     # needs: validate-terraform
     strategy:
       matrix:
@@ -41,6 +42,21 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+      - name: Check Conditions and Exit if Not Applicable
+        run: |
+          if [ "${{ github.event_name }}" != "push" ] || \
+             ([ "${{ matrix.environment.name }}" != "dev" ] && \
+              [ "${{ matrix.environment.name }}" != "prod" ] || \
+              [ "${{ matrix.environment.name }}" == "prod" ] && \
+              [ "${{ startsWith(github.ref, 'refs/tags/release/') }}" != "true" ]); then
+            echo "Skipping this job: Not a push event, or not dev/prod, or prod without release tag."
+            exit 1
+          fi
+      - name: Set Environment
+        run: echo "Running for environment ${{ matrix.environment.name }}"
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -49,36 +65,45 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+      - name: Set Image Tag
+        id: set-tag
+        run: |
+          if [[ ${{ matrix.environment.name }} == 'prod' && ${{ startsWith(github.ref, 'refs/tags/release/') }} == 'true' ]]; then
+            TAG=$(echo ${{ github.ref }} | sed 's/refs\/tags\/release\///')
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
       - name: Build and Push Main API
         run: |
-          echo "Building Main API image for ${{ matrix.environment.name }}..."
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/main-api:${{ github.sha }} ./main-api
+          echo "Building Main API image for ${{ matrix.environment.name }} with tag ${{ steps.set-tag.outputs.tag }}..."
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/main-api:with tag ${{ steps.set-tag.outputs.tag }} ./main-api
           echo "Pushing Main API image..."
-          docker push ${{ steps.login-ecr.outputs.registry }}/main-api:${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/main-api:with tag ${{ steps.set-tag.outputs.tag }}
       - name: Build and Push Auxiliary Service
         run: |
-          echo "Building Auxiliary Service image for ${{ matrix.environment.name }}..."
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/auxiliary-service:${{ github.sha }} ./auxiliary-service
+          echo "Building Auxiliary Service image for ${{ matrix.environment.name }} with tag ${{ steps.set-tag.outputs.tag }}..."
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/auxiliary-service:${{ steps.set-tag.outputs.tag }} ./auxiliary-service
           echo "Pushing Auxiliary Service image..."
-          docker push ${{ steps.login-ecr.outputs.registry }}/auxiliary-service:${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/auxiliary-service:${{ steps.set-tag.outputs.tag }}
       - name: Install yq
         run: |
           sudo snap install yq
       - name: Update Helm Values for Dev - Auxiliary Service
         run: |
-          echo "Updating Auxiliary Service Helm values for ${{ matrix.environment.values-file }} ..."
-          yq e -i '.image.tag = "${{ github.sha }}"' myhelmcharts/charts/auxiliary-service/${{ matrix.environment.values-file }}
-          yq e -i '.version = "${{ github.sha }}"' myhelmcharts/charts/auxiliary-service/${{ matrix.environment.values-file }}
+          echo "Updating Auxiliary Service Helm values for ${{ matrix.environment.values-file }} with tag ${{ steps.set-tag.outputs.tag }}..."
+          yq e -i '.image.tag = "${{ steps.set-tag.outputs.tag }}"' myhelmcharts/charts/auxiliary-service/${{ matrix.environment.values-file }}
+          yq e -i '.version = "${{ steps.set-tag.outputs.tag }}"' myhelmcharts/charts/auxiliary-service/${{ matrix.environment.values-file }}
       - name: Update Helm Values for Dev - Main API
         run: |
           echo "Updating Main API Helm values for ${{ matrix.environment.values-file }} ..."
-          yq e -i '.image.tag = "${{ github.sha }}"' myhelmcharts/charts/main-api/${{ matrix.environment.values-file }}
-          yq e -i '.version = "${{ github.sha }}"' myhelmcharts/charts/main-api/${{ matrix.environment.values-file }}
+          yq e -i '.image.tag = "${{ steps.set-tag.outputs.tag }}"' myhelmcharts/charts/main-api/${{ matrix.environment.values-file }}
+          yq e -i '.version = "${{ steps.set-tag.outputs.tag }}"' myhelmcharts/charts/main-api/${{ matrix.environment.values-file }}
       - name: Commit and Push Changes
         run: |
           echo "Committing updated manifests..."
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
           git add myhelmcharts/charts/
-          git commit -m "Update Helm ${{ matrix.environment.values-file }} for ${{ matrix.environment.name }} with version ${{ github.sha }}" || echo "No changes to commit"
+          git commit -m "Update Helm ${{ matrix.environment.values-file }} for ${{ matrix.environment.name }} with version ${{ steps.set-tag.outputs.tag }}" || echo "No changes to commit"
           git push
