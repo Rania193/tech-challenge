@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: service-versions
-  namespace: main-api
-data:
-  main-api-version: 9cb3c1ed38cc361442716a36457cce2189ac7b70
