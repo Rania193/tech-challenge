@@ -120,8 +120,8 @@ jobs:
         if: |
           steps.check-conditions.outputs.should_run == 'true' &&
           (
-            matrix.environment.name == 'prod' ||       # always commit for prod
-            github.ref == 'refs/heads/main'            # commit for dev only when on main
+            matrix.environment.name == 'prod' ||
+            github.ref == 'refs/heads/main'            
           )
         run: |
           echo "Committing updated manifests..."
