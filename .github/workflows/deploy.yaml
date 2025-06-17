@@ -117,10 +117,7 @@ jobs:
           for svc in auxiliary-service main-api; do
             file="${CHARTS_DIR}/${svc}/values-${{ matrix.environment.name }}.yaml"
             echo "Updating $file to tag ${{ steps.set-tag.outputs.tag }}"
-            yq e -i "
-              .image.tag = \"${{ steps.set-tag.outputs.tag }}\" |
-              .version   = \"${{ steps.set-tag.outputs.tag }}\"
-            " \"$file\"
+            yq e ".image.tag = \"${{ steps.set-tag.outputs.tag }}\" | .version = \"${{ steps.set-tag.outputs.tag }}\"" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
           done
 
       - name: Commit & push chart bumps
