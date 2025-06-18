@@ -135,13 +135,6 @@ Each pod gets its own SERVICE_VERSION from a ConfigMap at start-up; the value is
 |`environment`|`dev`|Supports multi-env (e.g. dev / prod)|
 |`github_repo`|`Rania193/tech-challenge`|Owner/repo for IAM OIDC trust|
 
-### Usage
-
-```bash
-cd terraform/bootstrap && terraform init && terraform apply
-cd .. && terraform init && terraform apply
-```
-
 ---
 
 ## CI/CD – GitHub Actions `(.github/workflows/deploy.yaml)`
@@ -197,15 +190,10 @@ sed -i '' -e 's#Rania193/tech-challenge#<YOUR-USER>/tech-challenge#g' \
 ```
 
 ### 2. Deploy Infrastructure on AWS
+
 ```bash
-cd terraform/bootstrap
-terraform init
-terraform plan
-terraform apply
-cd ..
-terraform init
-terraform plan   # inspect changes
-terraform apply  # provision AWS infra
+cd terraform/bootstrap && terraform init && terraform apply
+cd .. && terraform init && terraform apply
 ```
 ### 3. Setup your cluster
 ```bash
@@ -561,3 +549,4 @@ Below are some of the compromises I'm aware of and how I would tackle them in a 
 | **Single CI IAM role**     | One role (`github-actions-app-dev`) drives **all** CI tasks for both dev and prod environments.           | Reduces Terraform clutter; you can push both `<sha>` and `vX.Y.Z` tags into the same repo. | Create separate OIDC roles for dev and prod, maybe prod role will have permission to publish images to prod repos (have separate ECR repos too)                                                                                                                                                                                                                                                                   |
 | **Terraform environments** | Single TF root executed once (`terraform apply`) for *both* dev & prod. One state bucket, one lock table. | Keeps the interview demo to two `apply` commands; no need to juggle workspaces.            | Split state **per environment**:<br/>* **Option A – workspaces**: `terraform workspace new prod`, separate state files in the same bucket.<br/>* **Option B – folder-per-env**: `terraform/dev` & `terraform/prod`, each with its own backend (bucket and lock table) and its own GitHub Actions role.<br/>Add CI jobs `terraform-plan-dev` + `terraform-plan-prod`, enforce PR approval before applying to prod. |
 
+And that's it!
