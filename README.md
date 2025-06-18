@@ -173,11 +173,13 @@ Both legs commit the bump back to main with [skip ci], so they don’t retrigger
    git clone https://github.com/<YOUR-USER>/tech-challenge.git
    cd tech-challenge
 3. Replace the hard-coded repository string (only three places):
+
 |File|Line(s) to edit|What to change|
 |---|---|---|
 |`argocd/auxiliary-service-appset.yaml`|`spec.template.spec.source.repoURL`|Replace `https://github.com/Rania193/tech-challenge` with your fork URL|
 |`argocd/main-api-appset.yaml`|`spec.template.spec.source.repoURL`|Same replacement|
 |`terraform/variables.tf`|`variable "github_repo"` default|Set to `<yourUser>/tech-challenge` (owner/repo)|
+
 
 ```bash
 # one-liner (Linux/macOS)
