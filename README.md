@@ -146,7 +146,7 @@ Each pod gets its own SERVICE_VERSION from a ConfigMap at start-up; the value is
 | `push` → **main**      | `dev`      | `<sha>`   | `values-dev.yaml`  | **dev**          |
 | `push` tag `release/*` | `prod`     | `vX.Y.Z`  | `values-prod.yaml` | **prod**         |
 
-Both legs commit the bump back to main with [skip ci], so they don’t retrigger.
+Both legs commit the bump back to main with.
 **Steps**:
    1. **Checkout code**  
    2. **Assume AWS role** via OIDC (`aws-actions/configure-aws-credentials@v2`)  
