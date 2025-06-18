@@ -83,6 +83,15 @@ graph LR
     
 - **Argo CD**: continuously reconciles your `k8s/` folder into the `main-api` and `auxiliary-service` namespaces.
 
+#### _Why “one-namespace-per-environment” instead of “one-namespace-per-service-per-environment”_
+
+> In the spec you suggested **“Namespaces for separation (at least one for the Main API, one for the Auxiliary Service … and optionally multi-env).”**  
+> For this demo I chose to group the two services by **environment** instead of by **service**:
+
+| Decision                                                                                                | Rationale in a 2-service demo                                                                                                            | When we would switch                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`dev/` and `prod/` namespaces**<br/>(both **Main-API** and **Aux-Svc** live together inside each env) | _• Service discovery is trivial_: `http://auxiliary-service.dev.svc.cluster.local`.<br/>_• Shows the multi-env concept without clutter._ | If the platform grows beyond a handful of micro-services **or** we need stricter blast-radius control, we would adopt **one namespace per environment per service**, e.g. `dev-main-api`, `dev-aux-svc`, `prod-main-api`, … – the Helm charts already template `{{ .Release.Namespace }}`, so it’s a one-line change in each Argo CD `destination.namespace`. |
+
 ### Runtime flow (Main → Aux → AWS)
 ```mermaid
 sequenceDiagram
@@ -247,7 +256,7 @@ objects (one per chart) that point to
 values-prod.yaml depending on the destination namespace.
 
 Argo CD notices the new ApplicationSets, renders the charts, and
-performs a `helm upgrade --install …`inside the cluster for you.
+performs a `helm upgrade --install …`inside the cluster.
 ArgoCD now syncs `dev` & `prod` automatically.
 
 
@@ -272,9 +281,9 @@ kubectl create secret docker-registry regcred \
   --docker-password=$TOKEN \
   --namespace=prod
   ```
-  Make sure to store to have `AWS_ACCOUNT` and `AWS_REGION` environment variables set to your own values.
+  Make sure to have `AWS_ACCOUNT` and `AWS_REGION` environment variables set to your own values.
 
-Also create an `aws-credentials` secret in the `dev` and `prod` namespaces with your AWS keys, as the auxiliary service will need it.
+Also create an `aws-credentials` secret in the `dev` and `prod` namespaces with your AWS keys, as the auxiliary service will need it to communicate with AWS.
 ```bash
 kubectl create secret generic aws-credentials \ --from-literal=AWS_ACCESS_KEY_ID= \ --from-literal=AWS_SECRET_ACCESS_KEY= \ -n dev
 ```
@@ -283,7 +292,8 @@ kubectl create secret generic aws-credentials \ --from-literal=AWS_ACCESS_KEY_ID
 ```
 
 #### Optional: Auto-Refresh ECR Pull-Secret (Cronjob)
-You can create a cronjob to refresh the Docker credentials for your cluster every 12 hours instead of doing it manually.
+You can create a cronjob to refresh the Docker credentials for your cluster every 12 hours instead of doing it manually. This is because the project is deployed on minikube (local cluster)
+
 Create a file at `/usr/local/bin/aws-ecr-update-credentials.sh` with the following contents:
 
 ```bash
@@ -360,7 +370,7 @@ kubectl port-forward svc/main-api -n dev 8000:8000 # or -n prod
 curl -s http://localhost:8000/s3-buckets | jq
 ```
 
-You’ll see bucket names and matching version hashes.
+You’ll see bucket names and service versions.
 
 ---
 
@@ -377,7 +387,7 @@ curl -s http://<MAIN_API_HOST>:8000/s3-buckets | jq
 ```json
 {
   "auxiliary_service_version": "abcd1234...",
-  "buckets": ["kantox-challenge-dev-bucket", ...],
+  "buckets": ["kantox-challenge-dev-bucket", "kantox-challenge-terraform-state"],
   "main_api_version": "abcd1234..."
   
 }
@@ -441,7 +451,13 @@ curl -s http://<MAIN_API_HOST>:8000/parameter/<param_name> | jq
     minikube addons enable metrics-server
     ```
 
-4. **Verify Prometheus Targets**
+4. **Deploy the pod monitors**
+
+    ```bash
+    kubectl apply -f k8s/monitoring
+    ```
+
+5. **Verify Prometheus Targets**
 
     ```bash
     kubectl port-forward svc/monitoring-kube-prometheus-prometheus -n monitoring 9090
@@ -452,7 +468,7 @@ curl -s http://<MAIN_API_HOST>:8000/parameter/<param_name> | jq
     http://localhost:9090/targets
     ```
 
-5. **Grafana**
+6. **Grafana**
 
     ```bash
     kubectl port-forward svc/monitoring-grafana -n monitoring 3000:80
@@ -465,7 +481,7 @@ curl -s http://<MAIN_API_HOST>:8000/parameter/<param_name> | jq
     - **User**: `admin`  
     - **Pass**: `admin` (or whatever you set above)
 
-6. **Build a Dashboard Panel**
+7. **Build a Dashboard Panel**
 
     - Click **+** → **Dashboard** → **Add new panel**  
     - **Visualization**: Time series  
@@ -519,7 +535,7 @@ curl -s http://<MAIN_API_HOST>:8000/parameter/<param_name> | jq
 
 ### ArgoCD Configuration
 
-![ArgoCd Apps](docs/images/Argocd.png)
+![ArgoCd Apps](docs/images/argocd.png)
 
 ### Grafana: CPU and Memory Usage by Pod
 
@@ -528,7 +544,8 @@ curl -s http://<MAIN_API_HOST>:8000/parameter/<param_name> | jq
 
 
 ## Possible Improvements
-The project intentionally keeps some things simple
+The project intentionally keeps some things simple.
+
 Below are some of the compromises I'm aware of and how I would tackle them in a production engagement.
 
 
