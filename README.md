@@ -75,7 +75,7 @@ graph LR
     class MON,Prom,Graf monNS;
 ```
 
-- **Namespaces**: `argocd`, `main-api`, `auxiliary-service`.
+- **Namespaces**: `dev`, `prod`, `argocd`, `monitoring`.
     
 - **Terraform**: bootstraps remote state, then S3 bucket, SSM parameters, ECR repos, IAM roles & OIDC.
     
