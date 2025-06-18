@@ -1,67 +1,78 @@
 # Cloud Engineer Challenge
 
-Kubernetes-native microservices with GitOps (Argo CD), Terraform IaC, AWS integration (ECR, S3, SSM), a GitHub Actions CI/CD pipeline, and monitoring with Prometheus and Grafana.
+* Kubernetes-native Python services  
+* GitOps with **Argo CD**  
+* Terraform IaC provisioning AWS (ECR · S3 · SSM · IAM/OIDC)  
+* CI/CD (trunk-based) on **GitHub Actions**  
+* Observability via **Prometheus + Grafana**
+
+---
 
 ## Architecture Overview
 
 ```mermaid
-graph TD
-    A[GitHub Repository] -->|Push Code| B[GitHub Actions]
-    B -->|Build & Push Docker Images| C[AWS ECR]
-    B -->|Update Manifests| D[Kubernetes Manifests]
-    
-    D -->|Sync| E[Argo CD]
-    E -->|Deploy| F[Kubernetes Cluster]
-    
-    F --> G[Namespace: main-api]
-    F --> H[Namespace: auxiliary-service]
-    
-    G --> I[Main API Pod]
-    H --> J[Auxiliary Service Pod]
-    
-    I -->|HTTP Requests| J
-    J -->|AWS SDK| K[AWS Services]
-    
-    K --> L[S3 Buckets]
-    K --> M[Parameter Store]
-    
-    N[Terraform] -->|Provision| L
-    N -->|Provision| M
-    N -->|Provision| O[IAM Role/User]
-    
-    P[ConfigMap: service-versions] --> I
-    P --> J
-    Q[Secret: aws-credentials] --> I
-    Q --> J
-    
-    subgraph CI/CD Pipeline
-        A
-        B
-        C
-        D
+%%{init: {'theme': 'default'}}%%
+graph LR
+    subgraph GitHub[GitHub]
+        M([Commit<br/>to <b>main</b>]):::gitEvt
+        T([Tag<br/><b>release/vX.Y.Z</b>]):::gitEvt
     end
-    
-    subgraph Kubernetes Cluster
-        E
-        F
-        G
-        H
-        I
-        J
-        P
-        Q
+
+    M -- Dev leg --> CI[GitHub&nbsp;Actions]:::ci
+    T -- Prod leg --> CI
+
+    CI -- "docker build / push" --> ECR[(AWS&nbsp;ECR)]
+    CI -- "patch<br/><code>values-*.yaml</code>" --> Values[Helm&nbsp;values]
+
+    Values -- Git&nbsp;sync --> Argo[Argo&nbsp;CD]:::argocd
+    Argo -- deploy --> K8s[(Kubernetes&nbsp;Cluster)]
+
+    %% Namespaces
+    subgraph DEV["dev ns"]
+        DevAPI(Main-API)
+        DevAux(Aux-Svc)
     end
-    
+    subgraph PROD["prod ns"]
+        ProdAPI(Main-API)
+        ProdAux(Aux-Svc)
+    end
+    subgraph MON["monitoring ns"]
+        Prom[Prometheus]
+        Graf[Grafana]
+        Prom --> Graf
+    end
+    K8s --> DEV & PROD & MON
+
+    %% Prometheus scraping
+    DevAPI -- scrape --> Prom
+    DevAux -- scrape --> Prom
+    ProdAPI -- scrape --> Prom
+    ProdAux -- scrape --> Prom
+
+    %% AWS
     subgraph AWS
-        K
-        L
-        M
-        O
+        ECR
+        S3[S3&nbsp;Buckets]
+        SSM[Parameter&nbsp;Store]
     end
-    
-    subgraph Infrastructure as Code
-        N
-    end
+    DevAPI -. AWS SDK .-> S3 & SSM
+    DevAux -. AWS SDK .-> S3 & SSM
+    ProdAPI -. AWS SDK .-> S3 & SSM
+    ProdAux -. AWS SDK .-> S3 & SSM
+
+    %% Terraform
+    TF[Terraform] --> ECR & S3 & SSM & IAM[IAM&nbsp;Roles + OIDC]
+
+    classDef gitEvt fill:#F6F8FA,stroke:#444,font-weight:bold;
+    classDef ci     fill:#E3F2FD,stroke:#1E88E5;
+    classDef argocd fill:#F3E5F5,stroke:#7B1FA2;
+    classDef devNS  fill:#E0F2F1,stroke:#00897B;
+    classDef prodNS fill:#FFEBEE,stroke:#C62828;
+    classDef monNS  fill:#EDE7F6,stroke:#5E35B1;
+
+    class DEV,DevAPI,DevAux devNS;
+    class PROD,ProdAPI,ProdAux prodNS;
+    class MON,Prom,Graf monNS;
 ```
 
 - **Namespaces**: `argocd`, `main-api`, `auxiliary-service`.
@@ -71,6 +82,25 @@ graph TD
 - **GitHub Actions**: builds & tags Docker images (`${{ github.sha }}`), updates k8s manifests, commits.
     
 - **Argo CD**: continuously reconciles your `k8s/` folder into the `main-api` and `auxiliary-service` namespaces.
+
+### Runtime flow (Main → Aux → AWS)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Main as Main-API Pod<br/>(SERVICE_VERSION =vMAIN)
+    participant Aux  as Aux-Svc Pod<br/>(SERVICE_VERSION =vAUX)
+    participant S3   as AWS S3
+    participant SSM  as AWS SSM
+
+    Client ->>+ Main: GET /api/s3-buckets
+    Main   ->>+ Aux:  GET /s3-buckets
+    Aux    ->>+ S3:   ListBuckets()
+    Aux    ->>+ SSM:  DescribeParameters()
+    Aux    -->>- Main: buckets, aux_version=vAUX
+    Main   -->>- Client: buckets,<br/>main_version=vMAIN,<br/>aux_version=vAUX
+```
+Each pod gets its own SERVICE_VERSION from a ConfigMap at start-up; the value is simply echoed in every JSON response.
 
 ---
 
@@ -99,47 +129,63 @@ graph TD
 ### Usage
 
 ```bash
-cd terraform/bootstrap
-terraform init
-terraform plan
-terraform apply
-cd ..
-terraform init
-terraform plan   # inspect changes
-terraform apply  # provision AWS infra
+cd terraform/bootstrap && terraform init && terraform apply
+cd .. && terraform init && terraform apply
 ```
 
 ---
 
-## CI/CD – GitHub Actions
+## CI/CD – GitHub Actions `(.github/workflows/deploy.yaml)`
 
-File: `.github/workflows/ci-cd-pipeline.yml`
 
-1. **Trigger**: push to `main`.  
-2. **Permissions**:  
-   - `id-token: write` (GitHub OIDC)  
-   - `contents: write` (to push manifest updates)  
-3. **Steps**:
+
+| Trigger                | Matrix leg | Image tag | File bumped        | Target namespace |
+| ---------------------- | ---------- | --------- | ------------------ | ---------------- |
+| `push` → **main**      | `dev`      | `<sha>`   | `values-dev.yaml`  | **dev**          |
+| `push` tag `release/*` | `prod`     | `vX.Y.Z`  | `values-prod.yaml` | **prod**         |
+
+Both legs commit the bump back to main with [skip ci], so they don’t retrigger.
+**Steps**:
    1. **Checkout code**  
    2. **Assume AWS role** via OIDC (`aws-actions/configure-aws-credentials@v2`)  
    3. **Login to ECR** (`aws-actions/amazon-ecr-login@v1`)  
-   4. **Build & push images** (tagged `${{ github.sha }}`)  
-   5. **Patch manifests** (`sed -i` updates images + configmap versions)  
-   6. **Commit & push** updated `k8s/` manifests  
+   4. **Build & push images**
+   5. **Patch** the appropriate `values-*.yaml` with the tag
+   6. **Commit & push**
 
    ---
 
-   ## Local Deployment Guide
+## Local Deployment Guide
 
 ### Prerequisites
 
 - Docker Desktop or Podman  
 - `kubectl` ≥ 1.25  
 - Minikube v1.36.0
-- Terraform ≥ 1.7  
-- (Optional) Helm  
+- Terraform v1.7.4 
+- Helm  
 
-### 1. Deploy Infrastructure on AWS
+### 1. Fork or clone the repo
+1. **Fork** this repository to your own GitHub account  
+2. **Clone** your fork locally:
+
+   ```bash
+   git clone https://github.com/<YOUR-USER>/tech-challenge.git
+   cd tech-challenge
+3. Replace the hard-coded repository string (only three places):
+|File|Line(s) to edit|What to change|
+|---|---|---|
+|`argocd/auxiliary-service-appset.yaml`|`spec.template.spec.source.repoURL`|Replace `https://github.com/Rania193/tech-challenge` with your fork URL|
+|`argocd/main-api-appset.yaml`|`spec.template.spec.source.repoURL`|Same replacement|
+|`terraform/variables.tf`|`variable "github_repo"` default|Set to `<yourUser>/tech-challenge` (owner/repo)|
+
+```bash
+# one-liner (Linux/macOS)
+sed -i '' -e 's#Rania193/tech-challenge#<YOUR-USER>/tech-challenge#g' \
+  argocd/*.yaml terraform/variables.tf
+```
+
+### 2. Deploy Infrastructure on AWS
 ```bash
 cd terraform/bootstrap
 terraform init
@@ -150,13 +196,18 @@ terraform init
 terraform plan   # inspect changes
 terraform apply  # provision AWS infra
 ```
-### 2. Start your cluster
+### 3. Setup your cluster
 ```bash
 minikube start
+
+# Create required namespaces
+kubectl create namespace argocd
+kubectl create namespace dev
+kubectl create namespace prod
+kubectl create namespace monitoring
 ```
 
-
-### 3. Install Argo CD and Login
+### 4. Install Argo CD and Login
 
 Add Argo Helm Repo
 
@@ -184,37 +235,49 @@ To login
 kubectl -n argocd get secret argocd-initial-admin-secret   -o jsonpath='{.data.password}' | base64 -d && echo
 ```
 
-Apply the application
+Apply the applications
 ```bash
-kubectl apply -f argocd-application.yaml
+kubectl apply -f argocd/
 ```
+`/argocd` directory contains two ApplicationSet
+objects (one per chart) that point to
+`myhelmcharts/charts/<service>` and track values-dev.yaml or
+values-prod.yaml depending on the destination namespace.
 
-### 4. Cluster ECR Pull Permissions
+Argo CD notices the new ApplicationSets, renders the charts, and
+performs a `helm upgrade --install …`inside the cluster for you.
+ArgoCD now syncs `dev` & `prod` automatically.
+
+
+### 5. Cluster ECR Pull Permissions
 
 Generate the temporary token:
 ```bash
 TOKEN=$(aws ecr get-login-password --region eu-west-1)
 ```
-Then create a secret of type docker-registry with it in namespaces `main-api` and `auxiliary-service`
+Then create a secret of type docker-registry with it in namespaces `dev` and `prod`
 ```bash
 kubectl create secret docker-registry regcred \
   --docker-server=${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com \
   --docker-username=AWS \
   --docker-password=$TOKEN \
-  --namespace=main-api
+  --namespace=dev
   ```
   ```bash
   kubectl create secret docker-registry regcred \
   --docker-server=${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com \
   --docker-username=AWS \
   --docker-password=$TOKEN \
-  --namespace=auxiliary-service
+  --namespace=prod
   ```
   Make sure to store to have `AWS_ACCOUNT` and `AWS_REGION` environment variables set to your own values.
 
-Also create an `aws-credentials` secret in the `auxiliary-service` namespace with your AWS keys.
+Also create an `aws-credentials` secret in the `dev` and `prod` namespaces with your AWS keys, as the auxiliary service will need it.
 ```bash
-kubectl create secret generic aws-credentials \ --from-literal=AWS_ACCESS_KEY_ID= \ --from-literal=AWS_SECRET_ACCESS_KEY= \ -n auxiliary-service
+kubectl create secret generic aws-credentials \ --from-literal=AWS_ACCESS_KEY_ID= \ --from-literal=AWS_SECRET_ACCESS_KEY= \ -n dev
+```
+```bash
+kubectl create secret generic aws-credentials \ --from-literal=AWS_ACCESS_KEY_ID= \ --from-literal=AWS_SECRET_ACCESS_KEY= \ -n prod
 ```
 
 #### Optional: Auto-Refresh ECR Pull-Secret (Cronjob)
@@ -283,23 +346,15 @@ SHELL=/bin/bash
   >> $HOME/logs/aws-ecr-update-credentials.log 2>&1
 ```
 
-### 5. Create the Argo CD Application
-
-```bash
-kubectl apply -f argocd/kantox-challenge-app.yaml
-```
-
-Argo CD will now watch `k8s/` and auto-reconcile the services.
-
 ## Verifying a Successful Release
 
 ```bash
-kubectl get pods -n main-api
-kubectl get pods -n auxiliary-service
+kubectl get pods -n dev
+kubectl get pods -n prod
 # Should be READY 1/1
 
 # Port-forward Main API:
-kubectl port-forward svc/main-api -n main-api 8000:8000
+kubectl port-forward svc/main-api -n dev 8000:8000 # or -n prod
 curl -s http://localhost:8000/s3-buckets | jq
 ```
 
@@ -319,9 +374,10 @@ curl -s http://<MAIN_API_HOST>:8000/s3-buckets | jq
 
 ```json
 {
+  "auxiliary_service_version": "abcd1234...",
   "buckets": ["kantox-challenge-dev-bucket", ...],
-  "main_api_version": "abcd1234...",
-  "auxiliary_service_version": "abcd1234..."
+  "main_api_version": "abcd1234..."
+  
 }
 ```
 
@@ -330,18 +386,39 @@ curl -s http://<MAIN_API_HOST>:8000/s3-buckets | jq
 ```bash
 curl -s http://<MAIN_API_HOST>:8000/parameters | jq
 ```
+**Sample response:**
+```json
+{
+  "auxiliary_service_version": "abcd1234...",
+  "main_api_version": "abcd1234...",
+  "parameters": [
+    "/kantox-challenge/dev/param1",
+    "/kantox-challenge/dev/param2"
+  ]
+  
+}
+```
 
 ### Get a single parameter
 
 ```bash
 curl -s http://<MAIN_API_HOST>:8000/parameter/<param_name> | jq
 ```
+**Sample response:**
+```json
+{
+  "auxiliary_service_version": "abcd1234...",
+  "main_api_version": "abcd1234...",
+  "value": "<param_name>"
+  
+}
+```
 
 ## Monitoring
 
 1. **Install kube-prometheus-stack**
 
-    ```bash
+     ```bash
     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
     helm repo update
 
@@ -373,7 +450,7 @@ curl -s http://<MAIN_API_HOST>:8000/parameter/<param_name> | jq
     http://localhost:9090/targets
     ```
 
-5. **Explore Dashboards in Grafana**
+5. **Grafana**
 
     ```bash
     kubectl port-forward svc/monitoring-grafana -n monitoring 3000:80
@@ -390,30 +467,78 @@ curl -s http://<MAIN_API_HOST>:8000/parameter/<param_name> | jq
 
     - Click **+** → **Dashboard** → **Add new panel**  
     - **Visualization**: Time series  
-    - **Queries**:
+    - **Queries Examples**:
 
       ```promql
       # CPU usage by pod (cores)
-      sum(rate(container_cpu_usage_seconds_total{namespace="main-api"}[5m])) by (pod)
+      sum(rate(container_cpu_usage_seconds_total{namespace="dev"}[5m])) by (pod)
       ```
  
       ```promql
       # Memory usage by pod (MiB)
-      sum(container_memory_usage_bytes{namespace="main-api"}) by (pod) / (1024 * 1024)
+      sum(container_memory_usage_bytes{namespace="dev"}) by (pod) / (1024 * 1024)
       ```
 
 ## My results
 
-### Grafana: CPU Usage by Pod
+### Cluster Resources
 
-Below is the CPU usage for all `main-api` pods over the last 15 minutes:
+![Pods in dev namespace](docs/images/pods-dev.png)
 
-![CPU Usage by Pod](docs/images/grafana-cpu.png)
+![Pods in prod namespace](docs/images/pods-prod.png)
 
----
+![Pods in argocd namespace](docs/images/pods-argocd.png)
 
-### Grafana: Memory Usage by Pod
+![Pods in monitoring namespace](docs/images/pods-monitoring.png)
 
-This chart shows the memory footprint (in MiB) of each `main-api` pod over the last 15 minutes:
+![Services in dev namespace](docs/images/services-dev.png)
 
-![Memory Usage by Pod](docs/images/grafana-memory.png)
+![Services in prod namespace](docs/images/services-prod.png)
+
+### API Responses
+
+#### Main API dev
+![main-api dev requesting S3 buckets](docs/images/main-api-dev-s3.png)
+
+![main-api dev requesting parameters](docs/images/main-api-dev-params.png)
+
+![main-api dev requesting paramater1](docs/images/main-api-dev-param1.png)
+
+![main-api dev requesting paramater2](docs/images/main-api-dev-param2.png)
+
+#### Main API prod
+![main-api prod requesting S3 buckets](docs/images/main-api-prod-s3.png)
+
+![main-api prod requesting parameters](docs/images/main-api-prod-params.png)
+
+![main-api prod requesting paramater1](docs/images/main-api-prod-param1.png)
+
+![main-api prod requesting paramater2](docs/images/main-api-prod-param2.png)
+
+### ArgoCD Configuration
+
+![ArgoCd Apps](docs/images/Argocd.png)
+
+### Grafana: CPU and Memory Usage by Pod
+
+![CPU and Memory Usage by Pod](docs/images/Grafana-Metrics.png)
+
+
+
+## Possible Improvements
+The project intentionally keeps some things simple
+Below are some of the compromises I'm aware of and how I would tackle them in a production engagement.
+
+
+| Area                       | Demo shortcut                                                                                             | Why it’s OK for now                                                                        | How we’d harden / scale                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **IAM for pods**           | Workloads use an **IAM user key** mounted as a Secret (`aws-credentials`).                                | Easiest to demo; avoids extra cluster add-ons.                                             | Use IRSA (EKS) or `kiam/karpenter-external-secrets` on vanilla k8s → each ServiceAccount gets its own STS role; no static keys.                                                                                                                                                                                                                                                                                   |
+| **ECR pull secret**        | Manual token + optional cronjob to rotate every 12 h.                                                     | Fine on Minikube / Kind.                                                                   | On EKS use `imagePullSecrets` via IAM-based OIDC, or the ECR credential provider plugin.                                                                                                                                                                                                                                                                                                                          |
+| **Helm chart version**     | Chart `version` left at `0.1.0`; only the **app** version is bumped.                                      | Keeps the Git diff small for the demo.                                                     | Bump Chart version automatically (e.g. `helm cm-push`) whenever templates change; sign and upload to an OCI-based chart registry.                                                                                                                                                                                                                                                                                 |
+| **Networking**             | Pods talk via ClusterIP DNS; no Ingress/HTTPS.                                                            | Works inside Minikube; avoids cert setup.                                                  | Expose through Ingress/ALB or API Gateway with HTTPS, HSTS, WAF rules.                                                                                                                                                                                                                                                                                                                                            |
+| **Readiness / HPA**        | Single replica, no probes, no autoscaling.                                                                | Keeps yamls concise.                                                                       | Add liveness/readiness endpoints, CPU/memory HPA, pod disruption budgets.                                                                                                                                                                                                                                                                                                                                         |
+| **Hard-coded repo URL**    | Reviewer must search-replace `Rania193/tech-challenge` in three files.                                    | Keeps manifests YAML-only.                                                                 | Convert Argo CD manifests into a tiny Helm chart with `repoURL` as a value, or use Kustomize patches.                                                                                                                                                                                                                                                                                                             |
+| **Git workflow**           | Ultra-simple **trunk-based** flow: <br/>_push to `main` → dev_<br/>_tag `release/*` → prod                | Keeps the exercise small, zero merge complexity.                                           | Adopt _feature-branch + PR review_ (or Git Flow) for larger teams; enforce protected branches, status checks, CODEOWNERS, and maybe use _release branches_ for multiple versions in flight.                                                                                                                                                                                                                       |
+| **Single CI IAM role**     | One role (`github-actions-app-dev`) drives **all** CI tasks for both dev and prod environments.           | Reduces Terraform clutter; you can push both `<sha>` and `vX.Y.Z` tags into the same repo. | Create separate OIDC roles for dev and prod, maybe prod role will have permission to publish images to prod repos (have separate ECR repos too)                                                                                                                                                                                                                                                                   |
+| **Terraform environments** | Single TF root executed once (`terraform apply`) for *both* dev & prod. One state bucket, one lock table. | Keeps the interview demo to two `apply` commands; no need to juggle workspaces.            | Split state **per environment**:<br/>* **Option A – workspaces**: `terraform workspace new prod`, separate state files in the same bucket.<br/>* **Option B – folder-per-env**: `terraform/dev` & `terraform/prod`, each with its own backend (bucket and lock table) and its own GitHub Actions role.<br/>Add CI jobs `terraform-plan-dev` + `terraform-plan-prod`, enforce PR approval before applying to prod. |
+
