@@ -87,9 +87,7 @@ graph LR
 
 > In the spec you suggested **“Namespaces for separation (at least one for the Main API, one for the Auxiliary Service … and optionally multi-env).”**  
 > For this demo I chose to group the two services by **environment** instead of by **service**:
-
 > When the project started (single-environment dev only) I kept to the challenge PDF description literally: one namespace per service → main-api and auxiliary-service.
-
 > After adding a second environment (prod) that pattern would have given us four namespaces.
 > For a demo this felt unnecessarily noisy, so I pivoted to one namespace per environment.
 
