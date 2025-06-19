@@ -13,66 +13,69 @@
 ```mermaid
 %%{init: {'theme': 'default'}}%%
 graph LR
-    subgraph GitHub[GitHub]
-        M([Commit<br/>to <b>main</b>]):::gitEvt
-        T([Tag<br/><b>release/vX.Y.Z</b>]):::gitEvt
-    end
+  %% ───── GitHub side ──────────────────
+  subgraph GitHub[GitHub]
+      M([Commit<br/>to <b>main</b>]):::gitEvt
+      T([Tag<br/><b>release/vX.Y.Z</b>]):::gitEvt
+  end
 
-    M -- Dev leg --> CI[GitHub&nbsp;Actions]:::ci
-    T -- Prod leg --> CI
+  M -- Dev leg --> CI[GitHub&nbsp;Actions]:::ci
+  T -- Prod leg --> CI
 
-    CI -- "docker build / push" --> ECR[(AWS&nbsp;ECR)]
-    CI -- "patch<br/><code>values-*.yaml</code>" --> Values[Helm&nbsp;values]
+  CI -- "docker build / push" --> ECR[(AWS&nbsp;ECR)]
+  CI -- "patch<br/><code>values-*.yaml</code>" --> Values[Helm&nbsp;values]
+  Values -- Git&nbsp;sync --> Argo[Argo&nbsp;CD]:::argocd
+  Argo -- deploy --> K8s[(Kubernetes&nbsp;Cluster)]
 
-    Values -- Git&nbsp;sync --> Argo[Argo&nbsp;CD]:::argocd
-    Argo -- deploy --> K8s[(Kubernetes&nbsp;Cluster)]
+  %% ───── Namespaces ───────────────────
+  subgraph DEV["dev ns"]
+      DevAPI(Main-API)
+      DevAux(Aux-Svc)
+  end
+  subgraph PROD["prod ns"]
+      ProdAPI(Main-API)
+      ProdAux(Aux-Svc)
+  end
+  subgraph MON["monitoring ns"]
+      Prom[Prometheus]
+      Graf[Grafana]
+      Prom --> Graf
+  end
+  K8s --> DEV & PROD & MON
 
-    %% Namespaces
-    subgraph DEV["dev ns"]
-        DevAPI(Main-API)
-        DevAux(Aux-Svc)
-    end
-    subgraph PROD["prod ns"]
-        ProdAPI(Main-API)
-        ProdAux(Aux-Svc)
-    end
-    subgraph MON["monitoring ns"]
-        Prom[Prometheus]
-        Graf[Grafana]
-        Prom --> Graf
-    end
-    K8s --> DEV & PROD & MON
+  %% ───── Runtime traffic ──────────────
+  DevAPI -- "HTTP" --> DevAux
+  ProdAPI -- "HTTP" --> ProdAux
 
-    %% Prometheus scraping
-    DevAPI -- scrape --> Prom
-    DevAux -- scrape --> Prom
-    ProdAPI -- scrape --> Prom
-    ProdAux -- scrape --> Prom
+  %% Prometheus scraping
+  DevAPI -- scrape --> Prom
+  DevAux -- scrape --> Prom
+  ProdAPI -- scrape --> Prom
+  ProdAux -- scrape --> Prom
 
-    %% AWS
-    subgraph AWS
-        ECR
-        S3[S3&nbsp;Buckets]
-        SSM[Parameter&nbsp;Store]
-    end
-    DevAPI -. AWS SDK .-> S3 & SSM
-    DevAux -. AWS SDK .-> S3 & SSM
-    ProdAPI -. AWS SDK .-> S3 & SSM
-    ProdAux -. AWS SDK .-> S3 & SSM
+  %% ───── AWS side ─────────────────────
+  subgraph AWS
+      ECR
+      S3[S3&nbsp;Buckets]
+      SSM[Parameter&nbsp;Store]
+  end
+  DevAux -. SDK .-> S3 & SSM
+  ProdAux -. SDK .-> S3 & SSM
 
-    %% Terraform
-    TF[Terraform] --> ECR & S3 & SSM & IAM[IAM&nbsp;Roles + OIDC]
+  %% ───── Terraform provisioning ───────
+  TF[Terraform] --> ECR & S3 & SSM & IAM[IAM&nbsp;Roles&nbsp;+&nbsp;OIDC]
 
-    classDef gitEvt fill:#F6F8FA,stroke:#444,font-weight:bold;
-    classDef ci     fill:#E3F2FD,stroke:#1E88E5;
-    classDef argocd fill:#F3E5F5,stroke:#7B1FA2;
-    classDef devNS  fill:#E0F2F1,stroke:#00897B;
-    classDef prodNS fill:#FFEBEE,stroke:#C62828;
-    classDef monNS  fill:#EDE7F6,stroke:#5E35B1;
+  %% ───── Styles ───────────────────────
+  classDef gitEvt fill:#F6F8FA,stroke:#444,font-weight:bold;
+  classDef ci     fill:#E3F2FD,stroke:#1E88E5;
+  classDef argocd fill:#F3E5F5,stroke:#7B1FA2;
+  classDef devNS  fill:#E0F2F1,stroke:#00897B;
+  classDef prodNS fill:#FFEBEE,stroke:#C62828;
+  classDef monNS  fill:#EDE7F6,stroke:#5E35B1;
 
-    class DEV,DevAPI,DevAux devNS;
-    class PROD,ProdAPI,ProdAux prodNS;
-    class MON,Prom,Graf monNS;
+  class DEV,DevAPI,DevAux devNS;
+  class PROD,ProdAPI,ProdAux prodNS;
+  class MON,Prom,Graf monNS;
 ```
 
 - **Namespaces**: `dev`, `prod`, `argocd`, `monitoring`.
