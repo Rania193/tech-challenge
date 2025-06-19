@@ -111,8 +111,8 @@ resource "aws_iam_role_policy" "github_actions_policy" {
           "ecr:PutImage",
           "ecr:UploadLayerPart"
         ]
-        Resource = var.repository_arn_list
-        # Resource = "*"
+        # Resource = var.repository_arn_list
+        Resource = "*"
       }
     ]
   })

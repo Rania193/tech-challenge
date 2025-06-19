@@ -14,7 +14,7 @@ variable "github_repo" {
 }
 
 variable "repository_arn_list" {
-  description = "URLs of the ECR repositories"
+  description = "URL of the main-api ECR repository"
   type        = list
   default = []
 }
