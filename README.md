@@ -84,7 +84,7 @@ graph LR
     
 - **GitHub Actions**: builds & tags Docker images, updates k8s manifests, commits.
     
-- **Argo CD**: continuously reconciles your `k8s/` folder into the `main-api` and `auxiliary-service` namespaces.
+- **Argo CD**: continuously reconciles with minikube cluster in dev and prod namespaces.
 
 #### _Why “one-namespace-per-environment” instead of “one-namespace-per-service-per-environment”_
 
